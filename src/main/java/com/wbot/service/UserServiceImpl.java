@@ -1,5 +1,7 @@
 package com.wbot.service;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import com.wbot.models.AppUser;
@@ -7,6 +9,12 @@ import com.wbot.models.Role;
 import com.wbot.repository.RoleRepo;
 import com.wbot.repository.UserRepo;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,14 +25,37 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor 
 @Transactional // database transaction
 @Slf4j // for logging things
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, UserDetailsService {
 
     private final UserRepo userRepo;
     private final RoleRepo roleRepo;
+    private final PasswordEncoder passwordEncoder;
+
+    // ? for spring security
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        AppUser user = userRepo.findByUsername(username);
+        if(user == null) {
+            log.error("User not found in the database");
+            throw new UsernameNotFoundException("User not found in the database");
+        } else {
+            log.info("User {} found in the database", user.getUsername());
+        }
+        // this extends simple granted authirities
+        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+        user.getRoles().forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority(role.getName()));
+        });
+
+        return new User(user.getUsername(), user.getPassword(), authorities);
+    }
 
     @Override
     public AppUser saveUser(AppUser user) {
         log.info("saving user {}", user.getUsername());
+        // encode it
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepo.save(user); // not handling duplicates
     }
 
@@ -54,5 +85,7 @@ public class UserServiceImpl implements UserService {
         log.info("getting all users");
         return userRepo.findAll(); // do not do this in production, use pagination
     }
+
+    
 
 }
