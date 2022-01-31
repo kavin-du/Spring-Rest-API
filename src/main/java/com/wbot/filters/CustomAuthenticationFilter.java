@@ -14,7 +14,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wbot.models.AppUser;
 
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
